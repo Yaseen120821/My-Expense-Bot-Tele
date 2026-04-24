@@ -116,7 +116,7 @@ async def _daily_report_job() -> None:
                         f"Daily report failed for user {user.telegram_id}: {e}"
                     )
 
-            await db.commit()
+            db.commit()
 
     except Exception as e:
         logger.error(f"Daily report job failed: {e}")
@@ -159,7 +159,7 @@ async def _weekly_report_job() -> None:
                         f"Weekly report failed for user {user.telegram_id}: {e}"
                     )
 
-            await db.commit()
+            db.commit()
 
     except Exception as e:
         logger.error(f"Weekly report job failed: {e}")
@@ -202,7 +202,7 @@ async def _monthly_report_job() -> None:
                         f"Monthly report failed for user {user.telegram_id}: {e}"
                     )
 
-            await db.commit()
+            db.commit()
 
     except Exception as e:
         logger.error(f"Monthly report job failed: {e}")
@@ -221,8 +221,8 @@ async def _cleanup_pending_confirmations() -> None:
             stmt = delete(PendingConfirmation).where(
                 PendingConfirmation.created_at < cutoff
             )
-            result = await db.execute(stmt)
-            await db.commit()
+            result = db.execute(stmt)
+            db.commit()
             if result.rowcount > 0:
                 logger.info(f"Cleaned up {result.rowcount} expired pending confirmations")
     except Exception as e:

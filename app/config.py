@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = Field("gemini-2.0-flash", description="Gemini model name for text + vision")
 
     # --- Database (Neon PostgreSQL) ---
-    DATABASE_URL: str = Field("", description="Async PostgreSQL connection string (Neon)")
+    DATABASE_URL: str = Field("", description="Synchronous PostgreSQL connection string (Neon)")
 
     # --- Resend Email API ---
     RESEND_API_KEY: str = Field("", description="Resend API key for email delivery")
@@ -88,14 +88,14 @@ class Settings(BaseSettings):
         return [name for name, value in required.items() if not value.strip()]
 
     def validate_database_url(self) -> None:
-        """Ensure DATABASE_URL uses the async driver and SSL for Neon."""
+        """Ensure DATABASE_URL uses the psycopg driver and SSL for Neon."""
         url = self.DATABASE_URL
         if not url:
             return
 
-        if not url.startswith("postgresql+asyncpg://"):
+        if not url.startswith("postgresql+psycopg://"):
             raise ValueError(
-                f"DATABASE_URL must start with 'postgresql+asyncpg://'. "
+                f"DATABASE_URL must start with 'postgresql+psycopg://'. "
                 f"Got: {self._mask(url)}"
             )
 

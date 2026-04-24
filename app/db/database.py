@@ -6,12 +6,8 @@ Configured for Neon PostgreSQL with SSL.
 
 import ssl
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
 from app.utils.logger import get_logger
@@ -33,12 +29,12 @@ class Base(DeclarativeBase):
 # ---------------------------------------------------------------------------
 
 _engine = None
-_async_session_factory = None
+_session_factory = None
 
 
 def _build_connect_args() -> dict:
     """
-    Build connect_args for asyncpg.
+    Build connect_args for psycopg.
     Neon PostgreSQL requires SSL — create an SSL context.
     """
     settings = get_settings()
@@ -47,8 +43,7 @@ def _build_connect_args() -> dict:
     # Neon and most cloud Postgres providers require SSL
     if "sslmode=require" in url or "sslmode=verify" in url:
         ssl_ctx = ssl.create_default_context()
-        # Neon uses valid certs, but we don't have a local CA bundle check
-        # server_hostname is handled automatically by asyncpg
+        # server_hostname is handled automatically
         ssl_ctx.check_hostname = False
         ssl_ctx.verify_mode = ssl.CERT_NONE
         return {"ssl": ssl_ctx}
@@ -62,7 +57,7 @@ def _get_engine():
         settings = get_settings()
         connect_args = _build_connect_args()
 
-        _engine = create_async_engine(
+        _engine = create_engine(
             settings.DATABASE_URL,
             echo=(not settings.is_production),
             pool_size=10,
@@ -76,14 +71,14 @@ def _get_engine():
 
 
 def _get_session_factory():
-    global _async_session_factory
-    if _async_session_factory is None:
-        _async_session_factory = async_sessionmaker(
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = sessionmaker(
             bind=_get_engine(),
-            class_=AsyncSession,
+            class_=Session,
             expire_on_commit=False,
         )
-    return _async_session_factory
+    return _session_factory
 
 
 # ---------------------------------------------------------------------------
@@ -91,47 +86,46 @@ def _get_session_factory():
 # ---------------------------------------------------------------------------
 
 
-async def init_db() -> None:
+def init_db() -> None:
     """Create all tables. Use for development / initial setup."""
     # Import models so they register on Base.metadata
     import app.models.user  # noqa: F401
     import app.models.expense  # noqa: F401
 
     engine = _get_engine()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    Base.metadata.create_all(engine)
     logger.info("Database tables created successfully")
 
 
-async def close_db() -> None:
+def close_db() -> None:
     """Dispose of the connection pool."""
-    global _engine, _async_session_factory
+    global _engine, _session_factory
     if _engine is not None:
-        await _engine.dispose()
+        _engine.dispose()
         _engine = None
-        _async_session_factory = None
+        _session_factory = None
         logger.info("Database connection pool closed")
 
 
-async def get_db() -> AsyncSession:
+def get_db() -> Session:
     """
-    FastAPI dependency — yields an async session.
+    FastAPI dependency — yields a sync session.
 
     Usage:
         @router.get("/")
-        async def handler(db: AsyncSession = Depends(get_db)):
+        async def handler(db: Session = Depends(get_db)):
             ...
     """
     factory = _get_session_factory()
-    async with factory() as session:
+    with factory() as session:
         try:
             yield session
-            await session.commit()
+            session.commit()
         except Exception:
-            await session.rollback()
+            session.rollback()
             raise
 
 
 def get_session_factory():
-    """Return the async session factory (for use outside FastAPI deps, e.g. scheduler)."""
+    """Return the session factory (for use outside FastAPI deps, e.g. scheduler)."""
     return _get_session_factory()

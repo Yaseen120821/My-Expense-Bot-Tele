@@ -2,7 +2,7 @@
 Interactive query service — converts natural language questions to database queries.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.services import ai_service, expense_service
 from app.exceptions.custom_exceptions import QueryError
@@ -18,7 +18,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-async def handle_query(db: AsyncSession, user_id, text: str) -> str:
+async def handle_query(db: Session, user_id, text: str) -> str:
     """
     Process a natural language query:
     1. Interpret via Gemini → structured params
@@ -73,7 +73,7 @@ async def handle_query(db: AsyncSession, user_id, text: str) -> str:
 
 
 async def _category_query(
-    db: AsyncSession, user_id, category: str, start, end, period: str | None
+    db: Session, user_id, category: str, start, end, period: str | None
 ) -> str:
     """Query expenses for a specific category."""
     expenses = await expense_service.get_expenses(
@@ -103,7 +103,7 @@ async def _category_query(
 
 
 async def _summary_query(
-    db: AsyncSession, user_id, start, end, period: str | None
+    db: Session, user_id, start, end, period: str | None
 ) -> str:
     """Generate a summary with category breakdown."""
     categories = await expense_service.get_expenses_by_category(
@@ -126,7 +126,7 @@ async def _summary_query(
 
 
 async def _date_range_query(
-    db: AsyncSession, user_id, start, end, category: str | None, period: str | None
+    db: Session, user_id, start, end, category: str | None, period: str | None
 ) -> str:
     """Query expenses for a date range with optional category filter."""
     expenses = await expense_service.get_expenses(

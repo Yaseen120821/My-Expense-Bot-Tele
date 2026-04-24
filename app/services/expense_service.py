@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select, func, delete, and_, desc
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.models.expense import Expense, ExpenseSource, PendingConfirmation
 from app.models.user import User
@@ -24,12 +24,12 @@ logger = get_logger(__name__)
 
 
 async def get_or_create_user(
-    db: AsyncSession, telegram_id: int, first_name: str | None = None
+    db: Session, telegram_id: int, first_name: str | None = None
 ) -> User:
     """Find existing user by telegram_id or create a new one."""
     try:
         stmt = select(User).where(User.telegram_id == telegram_id)
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         user = result.scalar_one_or_none()
 
         if user is None:
@@ -38,13 +38,13 @@ async def get_or_create_user(
                 first_name=first_name,
             )
             db.add(user)
-            await db.flush()
+            db.flush()
             logger.info(f"Created new user: telegram_id={telegram_id}")
         else:
             # Update first_name if provided
             if first_name and user.first_name != first_name:
                 user.first_name = first_name
-                await db.flush()
+                db.flush()
 
         return user
 
@@ -53,10 +53,10 @@ async def get_or_create_user(
         raise DatabaseError(f"User lookup/creation failed: {e}")
 
 
-async def get_all_users(db: AsyncSession) -> list[User]:
+async def get_all_users(db: Session) -> list[User]:
     """Return all registered users (for scheduled reports)."""
     stmt = select(User)
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -66,7 +66,7 @@ async def get_all_users(db: AsyncSession) -> list[User]:
 
 
 async def add_expense(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     amount: float,
     category: str,
@@ -93,7 +93,7 @@ async def add_expense(
             source=source,
         )
         db.add(expense)
-        await db.flush()
+        db.flush()
 
         logger.info(
             f"Added expense: ₹{amount} ({category}) for user {user_id}"
@@ -106,7 +106,7 @@ async def add_expense(
 
 
 async def get_expenses(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
@@ -129,7 +129,7 @@ async def get_expenses(
             .order_by(Expense.date.desc(), Expense.created_at.desc())
         )
 
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         return list(result.scalars().all())
 
     except Exception as e:
@@ -138,7 +138,7 @@ async def get_expenses(
 
 
 async def get_expenses_by_category(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     start_date: datetime,
     end_date: datetime,
@@ -158,7 +158,7 @@ async def get_expenses_by_category(
             .order_by(func.sum(Expense.amount).desc())
         )
 
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         rows = result.all()
         return {row[0]: float(row[1]) for row in rows}
 
@@ -168,7 +168,7 @@ async def get_expenses_by_category(
 
 
 async def get_daily_totals(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     start_date: datetime,
     end_date: datetime,
@@ -191,7 +191,7 @@ async def get_daily_totals(
             .order_by(func.date(Expense.date))
         )
 
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         rows = result.all()
         return {str(row[0]): float(row[1]) for row in rows}
 
@@ -201,7 +201,7 @@ async def get_daily_totals(
 
 
 async def get_total(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     start_date: datetime,
     end_date: datetime,
@@ -218,7 +218,7 @@ async def get_total(
                 )
             )
         )
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         total = result.scalar_one_or_none()
         return float(total) if total else 0.0
 
@@ -228,7 +228,7 @@ async def get_total(
 
 
 async def delete_last_expense(
-    db: AsyncSession, user_id: uuid.UUID
+    db: Session, user_id: uuid.UUID
 ) -> Expense | None:
     """Delete the most recently created expense for a user. Returns the deleted expense."""
     try:
@@ -238,12 +238,12 @@ async def delete_last_expense(
             .order_by(Expense.created_at.desc())
             .limit(1)
         )
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         expense = result.scalar_one_or_none()
 
         if expense:
-            await db.delete(expense)
-            await db.flush()
+            db.delete(expense)
+            db.flush()
             logger.info(f"Deleted last expense for user {user_id}: {expense}")
 
         return expense
@@ -254,11 +254,11 @@ async def delete_last_expense(
 
 
 async def get_expense_count(
-    db: AsyncSession, user_id: uuid.UUID
+    db: Session, user_id: uuid.UUID
 ) -> int:
     """Get total number of expenses for a user."""
     stmt = select(func.count()).select_from(Expense).where(Expense.user_id == user_id)
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     return result.scalar_one()
 
 
@@ -268,7 +268,7 @@ async def get_expense_count(
 
 
 async def store_pending_confirmation(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     chat_id: int,
     data: dict,
@@ -284,7 +284,7 @@ async def store_pending_confirmation(
             data=data,
         )
         db.add(pending)
-        await db.flush()
+        db.flush()
 
         logger.info(f"Stored pending confirmation for user {user_id}")
         return pending
@@ -295,7 +295,7 @@ async def store_pending_confirmation(
 
 
 async def get_pending_confirmation(
-    db: AsyncSession, user_id: uuid.UUID
+    db: Session, user_id: uuid.UUID
 ) -> PendingConfirmation | None:
     """Retrieve pending confirmation for a user."""
     stmt = (
@@ -304,19 +304,19 @@ async def get_pending_confirmation(
         .order_by(PendingConfirmation.created_at.desc())
         .limit(1)
     )
-    result = await db.execute(stmt)
+    result = db.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def clear_pending_confirmation(
-    db: AsyncSession, user_id: uuid.UUID
+    db: Session, user_id: uuid.UUID
 ) -> None:
     """Remove all pending confirmations for a user."""
     stmt = delete(PendingConfirmation).where(
         PendingConfirmation.user_id == user_id
     )
-    await db.execute(stmt)
-    await db.flush()
+    db.execute(stmt)
+    db.flush()
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ async def clear_pending_confirmation(
 
 
 async def detect_anomalies(
-    db: AsyncSession,
+    db: Session,
     user_id: uuid.UUID,
     new_amount: float,
 ) -> str | None:
@@ -352,7 +352,7 @@ async def detect_anomalies(
                 )
             )
         )
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         row = result.one_or_none()
 
         if row and row.avg and row.stddev:

@@ -12,7 +12,7 @@ matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.services import expense_service
 from app.exceptions.custom_exceptions import ReportError
@@ -53,7 +53,7 @@ CHART_STYLE = {
 # ---------------------------------------------------------------------------
 
 
-async def generate_daily_report(db: AsyncSession, user_id) -> str:
+async def generate_daily_report(db: Session, user_id) -> str:
     """
     Generate daily expense summary as a text message.
     Format:
@@ -93,7 +93,7 @@ async def generate_daily_report(db: AsyncSession, user_id) -> str:
 
 
 async def generate_weekly_report(
-    db: AsyncSession, user_id
+    db: Session, user_id
 ) -> tuple[str, list[tuple[str, bytes]]]:
     """
     Generate weekly report with:
@@ -162,7 +162,7 @@ async def generate_weekly_report(
 
 
 async def generate_monthly_report(
-    db: AsyncSession, user_id
+    db: Session, user_id
 ) -> tuple[str, list[tuple[str, bytes]]]:
     """
     Generate monthly report with charts and month-over-month comparison.
@@ -232,7 +232,7 @@ async def generate_monthly_report(
 
 
 async def generate_summary_text(
-    db: AsyncSession, user_id, period: str
+    db: Session, user_id, period: str
 ) -> str:
     """Generate a text-only summary for Telegram."""
     try:

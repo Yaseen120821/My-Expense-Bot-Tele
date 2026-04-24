@@ -4,7 +4,7 @@ to the appropriate handler (commands, text messages, photo uploads).
 """
 
 from fastapi import APIRouter, Request, BackgroundTasks, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.db.database import get_db, get_session_factory
 from app.services import (
@@ -114,10 +114,10 @@ async def _process_update(data: dict) -> None:
                     else:
                         await _handle_text(db, user, chat_id, text)
 
-                await db.commit()
+                db.commit()
 
             except Exception as e:
-                await db.rollback()
+                db.rollback()
                 logger.error(f"Error processing update: {e}", exc_info=True)
                 await _send_error(chat_id, str(e))
 
@@ -130,7 +130,7 @@ async def _process_update(data: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _handle_command(db: AsyncSession, user, chat_id: int, text: str) -> None:
+async def _handle_command(db: Session, user, chat_id: int, text: str) -> None:
     """Route /commands to their handlers."""
     command = text.split()[0].lower()
     # Strip @botname suffix if present
@@ -182,7 +182,7 @@ async def _handle_command(db: AsyncSession, user, chat_id: int, text: str) -> No
 # ---------------------------------------------------------------------------
 
 
-async def _handle_text(db: AsyncSession, user, chat_id: int, text: str) -> None:
+async def _handle_text(db: Session, user, chat_id: int, text: str) -> None:
     """
     Handle free-text messages:
     1. Check for pending confirmation (Yes/No)
@@ -276,7 +276,7 @@ async def _handle_text(db: AsyncSession, user, chat_id: int, text: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _handle_photo(db: AsyncSession, user, chat_id: int, message: dict) -> None:
+async def _handle_photo(db: Session, user, chat_id: int, message: dict) -> None:
     """Handle receipt image upload."""
     try:
         # Get the largest photo (last in the array)
@@ -314,7 +314,7 @@ async def _handle_photo(db: AsyncSession, user, chat_id: int, message: dict) -> 
 
 
 async def _confirm_pending(
-    db: AsyncSession, user, chat_id: int, pending
+    db: Session, user, chat_id: int, pending
 ) -> None:
     """Confirm and save a pending receipt expense."""
     try:

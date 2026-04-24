@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     logger.info("\n" + settings.log_config_summary())
 
     # 1. Initialize database (Neon PostgreSQL)
-    await init_db()
+    init_db()
     logger.info("✅ Database initialized (Neon PostgreSQL)")
 
     # 2. Set Telegram webhook
@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
     await close_client()
 
     # Close database
-    await close_db()
+    close_db()
     logger.info("Shutdown complete")
 
 
