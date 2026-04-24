@@ -15,14 +15,13 @@ google-generativeai==0.8.4
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
 alembic==1.14.1
-psycopg2-binary==2.9.10
 
 # Scheduling
 apscheduler==3.10.4
 
 # Charts & Images
-matplotlib==3.10.0
-Pillow==11.1.0
+matplotlib>=3.9.0,<3.11
+Pillow>=10.4.0,<12.0
 
 # OCR Fallback
 pytesseract==0.3.13
