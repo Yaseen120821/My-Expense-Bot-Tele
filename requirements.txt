@@ -1,40 +1,23 @@
-# Core Framework
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-dotenv==1.0.1
-pydantic-settings==2.7.1
-pydantic==2.10.5
 
-# Async HTTP Client
+pydantic==2.7.4
+pydantic-settings==2.2.1
+
 httpx==0.28.1
-
-# Google Gemini AI
 google-generativeai==0.8.4
 
-# Database
 sqlalchemy[asyncio]==2.0.36
-asyncpg==0.30.0
-alembic==1.14.1
+asyncpg==0.29.0
 
-# Scheduling
+alembic==1.14.1
 apscheduler==3.10.4
 
-# Charts & Images
-matplotlib>=3.9.0,<3.11
-Pillow>=10.4.0,<12.0
+matplotlib==3.8.4
+pillow==10.4.0
 
-# OCR Fallback
 pytesseract==0.3.13
 
-# Email (via Resend API — uses httpx, no SMTP dependency needed)
-
-# Testing
-pytest==8.3.4
-pytest-asyncio==0.25.2
-pytest-cov==6.0.0
-pytest-mock==3.14.0
-aiosqlite==0.20.0
-
-# Utilities
 python-multipart==0.0.20
 tenacity==9.0.0
