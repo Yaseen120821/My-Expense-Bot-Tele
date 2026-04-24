@@ -12,19 +12,17 @@ Includes:
 import sys
 from functools import lru_cache
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseSettings, Field
 
 
 class Settings(BaseSettings):
     """Central configuration for the Expense Tracker application."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore",
-    )
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+        extra = "ignore"
 
     # --- Telegram Bot ---
     TELEGRAM_BOT_TOKEN: str = Field("", description="Telegram Bot API token from @BotFather")
